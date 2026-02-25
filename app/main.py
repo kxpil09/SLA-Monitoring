@@ -54,26 +54,11 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     logger.info("Starting SLA Monitor (env=%s)", settings.APP_ENV)
-
-    if settings.APP_ENV != "production":
-        # FIX: create_all is dev-only. In production, use Alembic migrations.
-        # Running create_all in prod silently skips schema changes and gives
-        # false confidence that your DB schema is up to date.
-        logger.warning(
-            "DEV MODE: Using create_all() for schema setup. "
-            "Replace with Alembic migrations before deploying to production."
-        )
-        Base.metadata.create_all(bind=engine)
-    else:
-        logger.info(
-            "Production mode: skipping create_all(). "
-            "Ensure Alembic migrations have been applied."
-        )
-
+    # Always create tables if they don't exist
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables verified/created.")
     yield
-    # Shutdown
     logger.info("Shutting down SLA Monitor")
 
 
@@ -93,7 +78,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "https://sla-frontend.onrender.com"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
