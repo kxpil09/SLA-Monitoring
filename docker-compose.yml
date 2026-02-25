@@ -1,0 +1,83 @@
+  services:
+
+    # ── Infrastructure ──────────────────────────────────────────────────
+
+    db:
+      image: postgres:15
+      container_name: sla_postgres
+      restart: always
+      environment:
+        POSTGRES_USER: ${POSTGRES_USER}
+        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        POSTGRES_DB: ${POSTGRES_DB}
+      ports:
+        - "5432:5432"
+      volumes:
+        - postgres_data:/var/lib/postgresql/data   # persist data across restarts
+      healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+
+    redis:
+      image: redis:7
+      container_name: sla_redis
+      restart: always
+      ports:
+        - "6379:6379"
+      healthcheck:
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+
+    # ── Application ──────────────────────────────────────────────────────
+
+    api:
+      build: .
+      container_name: sla_api
+      restart: always
+      command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+      ports:
+        - "8000:8000"
+      env_file: .env
+      environment:
+        # Override localhost → container service names for Docker networking
+        POSTGRES_HOST: db
+        REDIS_HOST: redis
+      depends_on:
+        db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+
+    worker:
+      build: .
+      container_name: sla_worker
+      restart: always
+      command: celery -A app.celery_app worker --loglevel=info
+      env_file: .env
+      environment:
+        POSTGRES_HOST: db
+        REDIS_HOST: redis
+      depends_on:
+        db:
+          condition: service_healthy
+        redis:
+          condition: service_healthy
+
+    beat:
+      build: .
+      container_name: sla_beat
+      restart: always
+      command: celery -A app.celery_app beat --loglevel=info
+      env_file: .env
+      environment:
+        POSTGRES_HOST: db
+        REDIS_HOST: redis
+      depends_on:
+        - worker
+
+  volumes:
+    postgres_data:
