@@ -9,29 +9,30 @@ Real-time uptime and latency monitoring platform with automated email alerting.
 - 🔄 Database migrations with Alembic
 - ✅ Comprehensive test coverage
 - 🐳 Fully containerized with Docker
+- ☁️ AWS Free Tier deployment ready
 
 ## Stack
-FastAPI · React · PostgreSQL · Redis · Celery · Docker
+FastAPI · React · PostgreSQL · Redis · Celery · Docker · AWS
 
 ## Architecture
 ```
-React Frontend ──▶ FastAPI API ──▶ PostgreSQL
-                       │
-                       ▼
-                    Redis ──▶ Celery Worker + Beat ──▶ Email Alerts
+React Frontend (S3 + CloudFront) ──▶ FastAPI API (EC2) ──▶ PostgreSQL (RDS)
+                                            │
+                                            ▼
+                                         Redis ──▶ Celery Worker + Beat ──▶ Email Alerts
 ```
 
-## Quick Start
+## Quick Start (Local Development)
 
 ### 1. Setup
 ```bash
-git clone <repo-url>
-cd sla-monitoring
+git clone https://github.com/kxpil09/SLA-Monitoring.git
+cd SLA-Monitoring
 cp .env.example .env
 # Edit .env with your credentials
 ```
 
-### 2. Run
+### 2. Run with Docker
 ```bash
 docker compose up --build
 ```
@@ -40,6 +41,34 @@ docker compose up --build
 - Frontend: http://localhost:5173
 - API Docs: http://localhost:8000/docs
 - Health: http://localhost:8000/health
+
+## AWS Deployment (Free Tier)
+
+### Prerequisites
+- AWS Account with Free Tier
+- AWS CLI installed and configured
+- SSH client
+
+### Quick Deploy
+```bash
+# 1. Follow AWS_DEPLOYMENT.md for detailed steps
+# 2. Or use automated script on EC2:
+git clone https://github.com/kxpil09/SLA-Monitoring.git
+cd SLA-Monitoring
+chmod +x deployment/deploy.sh
+./deployment/deploy.sh
+```
+
+### Architecture on AWS
+- **Frontend**: S3 + CloudFront (Static hosting)
+- **Backend**: EC2 t2.micro (Ubuntu 22.04)
+- **Database**: RDS PostgreSQL db.t3.micro
+- **Cache**: Redis (Docker on EC2)
+- **Workers**: Celery (on EC2)
+
+**Cost**: $0/month for 12 months (Free Tier)
+
+📖 **Full Guide**: See [AWS_DEPLOYMENT.md](./AWS_DEPLOYMENT.md)
 
 ## Configuration (.env)
 
@@ -126,14 +155,19 @@ sla-monitoring/
 │   └── config.py          # Settings
 ├── frontend/              # React frontend
 │   └── src/App.jsx        # Main component
+├── deployment/            # AWS deployment files
+│   ├── deploy.sh          # Automated deployment script
+│   ├── sla-api.service    # Systemd service files
+│   └── nginx-*.conf       # Nginx configuration
 ├── tests/                 # Test suite
 ├── alembic/               # DB migrations
-├── docker-compose.yml     # Container orchestration
-└── Dockerfile             # Backend image
+├── docker-compose.yml     # Local development
+└── AWS_DEPLOYMENT.md      # AWS deployment guide
 ```
 
 ## Common Commands
 
+### Local Development
 ```bash
 # Start services
 docker compose up --build
@@ -154,5 +188,61 @@ pytest
 docker exec -it sla_postgres psql -U kapil -d sla_monitor
 ```
 
+### AWS Production
+```bash
+# SSH into EC2
+ssh -i sla-monitor-key.pem ubuntu@YOUR_EC2_IP
+
+# Check service status
+sudo systemctl status sla-api sla-worker sla-beat
+
+# View logs
+sudo tail -f /var/log/sla-api-error.log
+
+# Restart services
+sudo systemctl restart sla-api sla-worker sla-beat
+
+# Update code
+cd ~/SLA-Monitoring && git pull && sudo systemctl restart sla-api sla-worker sla-beat
+```
+
+## Monitoring & Logs
+
+### Local (Docker)
+```bash
+docker compose logs -f api
+docker compose logs -f worker
+docker compose logs -f beat
+```
+
+### AWS (EC2)
+```bash
+sudo tail -f /var/log/sla-api-error.log
+sudo tail -f /var/log/sla-worker.log
+sudo tail -f /var/log/sla-beat.log
+```
+
+## Troubleshooting
+
+### Local Development
+- **Database connection failed**: Check if PostgreSQL container is running
+- **Redis connection failed**: Check if Redis container is running
+- **Frontend can't reach API**: Verify `VITE_API_URL` in `frontend/.env`
+
+### AWS Production
+- **API not responding**: Check `sudo systemctl status sla-api`
+- **Celery not running checks**: Check `sudo systemctl status sla-worker sla-beat`
+- **Database connection failed**: Verify RDS security group allows EC2 access
+
+📖 **Full Troubleshooting Guide**: See [deployment/QUICK_REFERENCE.md](./deployment/QUICK_REFERENCE.md)
+
 ## License
 MIT
+
+## Author
+Kapil - [GitHub](https://github.com/kxpil09)
+
+## Live Demo
+- Frontend: [Your CloudFront URL]
+- API Docs: [Your EC2 URL]/docs
+- GitHub: https://github.com/kxpil09/SLA-Monitoring

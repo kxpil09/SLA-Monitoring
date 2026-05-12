@@ -1,164 +1,148 @@
-# Render Deployment Guide
+# 🚀 Deploy to Render + Vercel (15 Minutes)
 
-## 🚀 Quick Deploy
+## ✅ **STEP 1: Deploy Backend to Render** (10 min)
 
-Your code is already on GitHub: https://github.com/kxpil09/SLA-Monitoring
-
-### Step 1: Update Existing Services
-
-Go to your Render dashboard: https://dashboard.render.com/project/prj-d6fl2p0gjchc73bsgneg
-
-#### For Each Service (API, Worker, Beat):
-
-1. **Click on the service**
-2. **Go to "Settings"**
-3. **Scroll to "Build & Deploy"**
-4. **Click "Manual Deploy" → "Deploy latest commit"**
-
-This will pull the latest code from GitHub with all new features!
-
----
-
-## 🔧 Environment Variables to Add
-
-Go to each service → **Environment** tab and add:
-
-### Email Alert Variables (Optional but Recommended):
-```
-ENABLE_EMAIL_ALERTS=true
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-ALERT_FROM_EMAIL=alerts@yourdomain.com
-ALERT_TO_EMAILS=admin@example.com
-```
-
----
-
-## 📊 What's New in This Deployment:
-
-✅ **Dynamic Alert Recipients** - Manage email recipients from UI
-✅ **Auto Database Migrations** - Alembic runs on startup
-✅ **Alert Management UI** - New "📧 Alerts" button in frontend
-✅ **Test Suite** - 19 tests with 76% coverage
-✅ **Optimized Codebase** - Removed unnecessary files
-✅ **Better Error Handling** - Production-ready code
-
----
-
-## 🌐 Frontend Deployment
-
-### Option 1: Deploy Frontend on Vercel (Recommended - Free)
-
-1. Go to https://vercel.com
-2. **Import Project** → Connect GitHub
-3. Select `SLA-Monitoring` repo
-4. **Root Directory**: `frontend`
-5. **Framework Preset**: Vite
-6. **Environment Variables**:
-   ```
-   VITE_API_URL=https://your-api-url.onrender.com/api/v1
-   ```
-7. **Deploy!**
-
-Your frontend will be live at: `https://sla-monitor.vercel.app`
-
-### Option 2: Deploy Frontend on Render
-
-1. **New → Static Site**
-2. Connect GitHub repo
-3. **Root Directory**: `frontend`
-4. **Build Command**: `npm install && npm run build`
-5. **Publish Directory**: `dist`
-6. **Environment Variables**:
-   ```
-   VITE_API_URL=https://your-api-url.onrender.com/api/v1
-   ```
-
----
-
-## 🔄 Update CORS in Backend
-
-After deploying frontend, update `app/main.py`:
-
-```python
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://your-frontend-url.vercel.app",  # Add your frontend URL
-        "https://your-frontend-url.onrender.com"
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
-```
-
-Then redeploy API service.
-
----
-
-## ✅ Verify Deployment
-
-1. **API Health**: `https://your-api-url.onrender.com/health`
-2. **API Docs**: `https://your-api-url.onrender.com/docs`
-3. **Frontend**: `https://your-frontend-url.vercel.app`
-
----
-
-## 📝 Resume Links
-
-Add these to your resume:
-
-```
-Live Demo: https://your-frontend-url.vercel.app
-API Docs: https://your-api-url.onrender.com/docs
-GitHub: https://github.com/kxpil09/SLA-Monitoring
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Database Migration Issues:
+### 1. Push Code to GitHub
 ```bash
-# SSH into Render shell (from service dashboard)
-alembic upgrade head
+cd c:\Users\Kapil\Desktop\sla-monitoring
+git add .
+git commit -m "Ready for Render deployment"
+git push origin main
 ```
 
-### Check Logs:
-- Go to service → **Logs** tab
-- Look for migration success messages
+### 2. Create Render Account
+1. Go to: https://render.com
+2. Sign up with GitHub
+3. Authorize Render to access your repositories
 
-### Redis Connection:
-- Ensure Redis service is running
-- Check environment variables are set correctly
+### 3. Deploy with Blueprint
+1. Click **"New +"** → **"Blueprint"**
+2. Connect repository: **kxpil09/SLA-Monitoring**
+3. Branch: **main**
+4. Render will detect `render.yaml`
+5. Click **"Apply"**
+
+### 4. Wait for Deployment (5-10 minutes)
+Render will automatically create:
+- ✅ PostgreSQL database (free, 90 days)
+- ✅ Redis instance (free)
+- ✅ API service
+- ✅ Celery worker
+- ✅ Celery beat scheduler
+
+### 5. Get API URL
+After deployment:
+1. Go to **Dashboard** → **sla-api**
+2. Copy the URL: `https://sla-api-xxxx.onrender.com`
 
 ---
 
-## 💰 Cost Estimate
+## ✅ **STEP 2: Deploy Frontend to Vercel** (5 min)
 
-- **PostgreSQL**: Free for 90 days, then $7/month
-- **Redis**: Free (25MB)
-- **API Service**: Free (750 hours/month)
-- **Worker**: Free (750 hours/month)
-- **Beat**: Free (750 hours/month)
-- **Frontend (Vercel)**: Free forever
+### 1. Go to Vercel
+1. Open: https://vercel.com
+2. Sign up with GitHub
+3. Click **"Add New"** → **"Project"**
 
-**Total**: FREE for 90 days, then $7/month
+### 2. Import Repository
+1. Select: **kxpil09/SLA-Monitoring**
+2. Click **"Import"**
+
+### 3. Configure Project
+```
+Framework Preset: Vite
+Root Directory: frontend
+Build Command: npm run build
+Output Directory: dist
+Install Command: npm install
+```
+
+### 4. Add Environment Variable
+```
+Name: VITE_API_URL
+Value: https://sla-api-xxxx.onrender.com/api/v1
+```
+(Use your actual Render API URL from Step 1)
+
+### 5. Deploy
+Click **"Deploy"** → Wait 2-3 minutes
+
+### 6. Get Frontend URL
+Copy: `https://sla-monitoring-xxxx.vercel.app`
 
 ---
 
-## 🎉 You're Done!
+## ✅ **STEP 3: Test Everything** (2 min)
 
-Your production-ready SLA Monitor is now live with:
-- ✅ Real-time monitoring
-- ✅ Email alerts
-- ✅ Dynamic recipient management
-- ✅ Beautiful UI
-- ✅ Auto-scaling
-- ✅ Professional deployment
+### Test Backend
+```
+https://sla-api-xxxx.onrender.com/health
+https://sla-api-xxxx.onrender.com/docs
+```
 
-Perfect for your resume! 🚀
+### Test Frontend
+```
+https://sla-monitoring-xxxx.vercel.app
+```
+
+### Add a Service
+1. Open frontend
+2. Click **"Add Service"**
+3. Name: `Google`, URL: `https://google.com`
+4. Should see health check within seconds
+
+---
+
+## 🎉 **DONE!**
+
+Your app is live:
+- **Frontend**: https://sla-monitoring-xxxx.vercel.app
+- **Backend**: https://sla-api-xxxx.onrender.com
+- **API Docs**: https://sla-api-xxxx.onrender.com/docs
+
+**Cost**: $0 for 90 days (Render free tier)
+
+---
+
+## 📧 **Optional: Enable Email Alerts**
+
+1. Go to Render Dashboard → **sla-api** → **Environment**
+2. Add variables:
+   ```
+   ENABLE_EMAIL_ALERTS=true
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASSWORD=your-app-password
+   ALERT_FROM_EMAIL=alerts@yourdomain.com
+   ALERT_TO_EMAILS=admin@example.com
+   ```
+3. Click **"Save Changes"**
+4. Service will auto-redeploy
+
+---
+
+## 🐛 **Troubleshooting**
+
+### Frontend can't reach backend
+- Check `VITE_API_URL` in Vercel environment variables
+- Verify Render API is running (check logs)
+
+### Backend not starting
+- Check Render logs: Dashboard → sla-api → Logs
+- Wait for database to be ready (first deploy takes 10 min)
+
+### Celery not running checks
+- Check worker logs: Dashboard → sla-worker → Logs
+- Verify Redis is running
+
+---
+
+## 💰 **Cost After Free Tier (90 days)**
+
+- PostgreSQL: $7/month
+- Redis: Free (25MB)
+- API + Workers: Free (750 hours/month)
+- Frontend (Vercel): Free forever
+
+**Total**: $7/month after 90 days
