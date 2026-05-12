@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine
 from app.routes import router
+from app.alert_routes import router as alert_router
 
 
 # -----------------------------------------------------------------------
@@ -55,9 +56,18 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting SLA Monitor (env=%s)", settings.APP_ENV)
-    # Always create tables if they don't exist
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables verified/created.")
+    
+    # Run database migrations on startup
+    try:
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Database migrations applied successfully")
+    except Exception as e:
+        logger.error(f"Failed to run migrations: {e}")
+    
+    logger.info("Application startup complete.")
     yield
     logger.info("Shutting down SLA Monitor")
 
@@ -85,6 +95,7 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(alert_router)
 
 
 # -----------------------------------------------------------------------

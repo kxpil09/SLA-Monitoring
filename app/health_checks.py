@@ -31,6 +31,8 @@ def check_service(db, service) -> CheckHistory:
     Returns:
         The CheckHistory record that was saved.
     """
+    from app.alerts import check_and_send_alert
+    
     start = datetime.now(timezone.utc)
     failure_reason = None
 
@@ -86,5 +88,8 @@ def check_service(db, service) -> CheckHistory:
     db.add(record)
     db.commit()
     db.refresh(record)
+    
+    # Check if alert should be sent
+    check_and_send_alert(db, service, record)
 
     return record

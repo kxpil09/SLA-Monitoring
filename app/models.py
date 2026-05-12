@@ -102,3 +102,22 @@ class AlertState(Base):
             f"<AlertState service_id={self.service_id} "
             f"last_status={self.last_status!r} failures={self.failure_count}>"
         )
+
+
+class AlertSettings(Base):
+    """
+    Stores dynamic alert configuration that can be updated via UI.
+    """
+    __tablename__ = "alert_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, nullable=False)  # e.g., 'alert_recipients'
+    value = Column(String, nullable=False)  # JSON or comma-separated
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    def __repr__(self):
+        return f"<AlertSettings key={self.key!r} value={self.value!r}>"

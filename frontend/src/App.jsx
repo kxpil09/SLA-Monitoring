@@ -215,6 +215,323 @@ const DeletePopover = ({ onConfirm, onCancel }) => {
   );
 };
 
+// ── AlertPanel ────────────────────────────────────────────────────────────────
+function AlertPanel({ onClose }) {
+  const [settings, setSettings] = useState(null);
+  const [status, setStatus] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [testEmail, setTestEmail] = useState("");
+  const [recipients, setRecipients] = useState("");
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [s, st, h, r] = await Promise.all([
+          apiFetch("/alerts/settings"),
+          apiFetch("/alerts/status"),
+          apiFetch("/alerts/history"),
+          apiFetch("/alerts/recipients"),
+        ]);
+        setSettings(s);
+        setStatus(st);
+        setHistory(h);
+        setRecipients(r.recipients.join(", "));
+      } catch (e) {
+        setMessage(`Error: ${e.message}`);
+      }
+    };
+    load();
+  }, []);
+
+  const sendTest = async () => {
+    if (!testEmail) {
+      setMessage("Please enter an email address");
+      return;
+    }
+    setSending(true);
+    setMessage("");
+    try {
+      await apiFetch("/alerts/test", {
+        method: "POST",
+        body: JSON.stringify({ email: testEmail }),
+      });
+      setMessage("✅ Test alert sent! Check your inbox.");
+    } catch (e) {
+      setMessage(`❌ Failed: ${e.message}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const updateRecipients = async () => {
+    if (!recipients) {
+      setMessage("Please enter at least one email");
+      return;
+    }
+    setSending(true);
+    setMessage("");
+    try {
+      const emails = recipients.split(",").map(e => e.trim()).filter(e => e);
+      await apiFetch("/alerts/recipients", {
+        method: "POST",
+        body: JSON.stringify({ emails }),
+      });
+      setMessage("✅ Alert recipients updated successfully!");
+    } catch (e) {
+      setMessage(`❌ Failed: ${e.message}`);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  useEffect(() => {
+    const h = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
+
+  const inp = {
+    width: "100%",
+    background: "var(--surface2)",
+    border: "1px solid var(--border)",
+    borderRadius: 9,
+    padding: "11px 14px",
+    color: "var(--text)",
+    fontSize: 14,
+    outline: "none",
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 200,
+        background: "rgba(5,8,16,.85)",
+        backdropFilter: "blur(6px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        animation: "fade-in .15s ease",
+        padding: "0 16px",
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--surface)",
+          border: "1px solid rgba(255,255,255,.09)",
+          borderRadius: 18,
+          padding: 32,
+          width: "100%",
+          maxWidth: 600,
+          maxHeight: "80vh",
+          overflow: "auto",
+          boxShadow: "0 32px 80px rgba(0,0,0,.7)",
+          animation: "slide-in .2s ease",
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>
+              📧 Alert Settings
+            </h2>
+            <p style={{ fontSize: 13, color: "var(--muted)" }}>
+              Email notifications for service downtime
+            </p>
+          </div>
+          <button
+            className="btn btn-ghost"
+            onClick={onClose}
+            style={{ padding: "6px 10px", fontSize: 16, lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Status */}
+        {status && (
+          <div
+            style={{
+              background: status.enabled ? "var(--gglow)" : "var(--rglow)",
+              border: status.enabled
+                ? "1px solid rgba(16,185,129,.3)"
+                : "1px solid rgba(244,63,94,.3)",
+              borderRadius: 10,
+              padding: "14px 18px",
+              marginBottom: 20,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 20 }}>{status.enabled ? "✅" : "⚠️"}</span>
+              <span style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>
+                Alerts {status.enabled ? "Enabled" : "Disabled"}
+              </span>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", gap: 16, flexWrap: "wrap" }}>
+              <span>📊 {status.total_services} services</span>
+              <span>🔴 {status.down_services} down</span>
+              <span>⚠️ {status.services_with_failures} with failures</span>
+            </div>
+          </div>
+        )}
+
+        {/* Alert Recipients */}
+        <div style={{ marginBottom: 24 }}>
+          <Label>Alert Recipients</Label>
+          <div style={{ display: "flex", gap: 10 }}>
+            <input
+              style={{ ...inp, flex: 1 }}
+              placeholder="email1@example.com, email2@example.com"
+              value={recipients}
+              onChange={(e) => setRecipients(e.target.value)}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={updateRecipients}
+              disabled={sending || !recipients}
+              style={{ padding: "11px 20px", background: "var(--green)" }}
+            >
+              {sending ? <Spinner /> : "Update"}
+            </button>
+          </div>
+        </div>
+
+        {/* Settings */}
+        {settings && (
+          <div style={{ marginBottom: 24 }}>
+            <Label>SMTP Configuration</Label>
+            <div
+              style={{
+                background: "var(--surface2)",
+                border: "1px solid var(--border)",
+                borderRadius: 10,
+                padding: 16,
+                fontSize: 13,
+                fontFamily: "var(--mono)",
+              }}
+            >
+              <div style={{ marginBottom: 8 }}>
+                <span style={{ color: "var(--muted)" }}>SMTP:</span>{" "}
+                <span style={{ color: "var(--text)" }}>
+                  {settings.smtp_host}:{settings.smtp_port}
+                </span>
+              </div>
+              <div>
+                <span style={{ color: "var(--muted)" }}>From:</span>{" "}
+                <span style={{ color: "var(--text)" }}>{settings.alert_from}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Test Alert */}
+        <div style={{ marginBottom: 24 }}>
+          <Label>Send Test Alert</Label>
+          <div style={{ display: "flex", gap: 10 }}>
+            <input
+              style={{ ...inp, flex: 1 }}
+              placeholder="your-email@example.com"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendTest()}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={sendTest}
+              disabled={sending || !settings?.enabled}
+              style={{ padding: "11px 20px" }}
+            >
+              {sending ? <Spinner /> : "Send Test"}
+            </button>
+          </div>
+          {message && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "10px 14px",
+                borderRadius: 8,
+                fontSize: 13,
+                background: message.startsWith("✅") ? "var(--gglow)" : "var(--rglow)",
+                border: message.startsWith("✅")
+                  ? "1px solid rgba(16,185,129,.3)"
+                  : "1px solid rgba(244,63,94,.3)",
+                color: "var(--text)",
+              }}
+            >
+              {message}
+            </div>
+          )}
+        </div>
+
+        {/* Alert History */}
+        {history.length > 0 && (
+          <div>
+            <Label>Recent Alerts</Label>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {history.map((h, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: "var(--surface2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    padding: "12px 14px",
+                    fontSize: 13,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600, color: "var(--text)" }}>{h.service_name}</span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: "2px 8px",
+                        borderRadius: 999,
+                        background: h.last_status === "UP" ? "var(--gglow)" : "var(--rglow)",
+                        color: h.last_status === "UP" ? "var(--green)" : "var(--red)",
+                      }}
+                    >
+                      {h.last_status}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--mono)" }}>
+                    {h.failure_count} failures
+                    {h.last_alert_at && ` · Last alert: ${fmtDate(h.last_alert_at)}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Info */}
+        <div
+          style={{
+            marginTop: 24,
+            padding: "12px 16px",
+            background: "rgba(99,102,241,.08)",
+            border: "1px solid rgba(99,102,241,.2)",
+            borderRadius: 8,
+            fontSize: 12,
+            color: "var(--muted)",
+          }}
+        >
+          <strong style={{ color: "var(--text)" }}>Alert Logic:</strong>
+          <ul style={{ marginTop: 8, marginLeft: 20, lineHeight: 1.6 }}>
+            <li>Immediate alert when service goes DOWN</li>
+            <li>Reminder every 5 consecutive failures</li>
+            <li>Recovery alert when service comes back UP</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── ServiceCard ───────────────────────────────────────────────────────────────
 function ServiceCard({ service, onDelete }) {
   const [history, setHistory]     = useState([]);
@@ -448,6 +765,7 @@ export default function App() {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
   const [modal,    setModal]    = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
 
   usePoller(async () => {
     try {
@@ -496,6 +814,9 @@ export default function App() {
           <button className="btn btn-primary" onClick={() => setModal(true)} style={{ marginTop:8, flexShrink:0 }}>
             <span style={{ fontSize:16, lineHeight:1 }}>+</span> Add Service
           </button>
+          <button className="btn btn-ghost" onClick={() => setShowAlerts(true)} style={{ marginTop:8, flexShrink:0, marginLeft:8 }}>
+            📧 Alerts
+          </button>
         </div>
 
         {/* Error */}
@@ -532,6 +853,7 @@ export default function App() {
       </div>
 
       {modal && <AddServiceModal onAdd={svc => setServices(s => [...s, svc])} onClose={() => setModal(false)} />}
+      {showAlerts && <AlertPanel onClose={() => setShowAlerts(false)} />}
     </>
   );
 }

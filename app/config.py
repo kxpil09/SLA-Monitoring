@@ -1,14 +1,3 @@
-"""
-config.py — Centralized configuration using pydantic-settings.
-
-WHY: Hardcoding credentials in database.py and celery_app.py means:
-  - You can't deploy to different environments (dev/staging/prod)
-  - Secrets can accidentally get committed to git
-  - Changing a value requires touching multiple files
-
-NOW: One place, reads from .env automatically, fails fast if anything is missing.
-"""
-
 from pydantic_settings import BaseSettings
 
 
@@ -27,6 +16,15 @@ class Settings(BaseSettings):
     # App
     APP_ENV: str = "development"
     LOG_LEVEL: str = "INFO"
+    
+    # Email Alerting
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    ALERT_FROM_EMAIL: str = ""
+    ALERT_TO_EMAILS: str = ""
+    ENABLE_EMAIL_ALERTS: bool = False
 
     @property
     def DATABASE_URL(self) -> str:
@@ -44,5 +42,4 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-# Single instance imported everywhere — don't instantiate Settings() in each file
 settings = Settings()

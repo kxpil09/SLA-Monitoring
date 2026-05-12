@@ -1,6 +1,7 @@
 # Environment
 .env
 *.env
+!.env.example
 
 # Python
 __pycache__/
@@ -8,11 +9,31 @@ __pycache__/
 *.pyo
 venv/
 .venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# Alembic
+*.db
+*.sqlite
 
 # Node
 frontend/node_modules/
 frontend/dist/
 frontend/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker
+*.log
+postgres_data/
 
 # Misc
 .DS_Store
