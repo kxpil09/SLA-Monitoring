@@ -28,15 +28,9 @@ services:
           name: sla-db
           property: database
       - key: REDIS_HOST
-        fromService:
-          name: sla-redis
-          type: redis
-          property: host
+        sync: false
       - key: REDIS_PORT
-        fromService:
-          name: sla-redis
-          type: redis
-          property: port
+        value: "6379"
       - key: APP_ENV
         value: production
       - key: LOG_LEVEL
@@ -73,15 +67,9 @@ services:
           name: sla-db
           property: database
       - key: REDIS_HOST
-        fromService:
-          name: sla-redis
-          type: redis
-          property: host
+        sync: false
       - key: REDIS_PORT
-        fromService:
-          name: sla-redis
-          type: redis
-          property: port
+        value: "6379"
       - key: APP_ENV
         value: production
 
@@ -114,15 +102,9 @@ services:
           name: sla-db
           property: database
       - key: REDIS_HOST
-        fromService:
-          name: sla-redis
-          type: redis
-          property: host
+        sync: false
       - key: REDIS_PORT
-        fromService:
-          name: sla-redis
-          type: redis
-          property: port
+        value: "6379"
       - key: APP_ENV
         value: production
 
@@ -130,7 +112,4 @@ databases:
   - name: sla-db
     databaseName: sla_monitor
     user: kapil
-    plan: free
-
-  - name: sla-redis
     plan: free
