@@ -1,17 +1,4 @@
 services:
-  # PostgreSQL Database
-  - type: pserv
-    name: sla-db
-    plan: free
-    databaseName: sla_monitor
-    user: kapil
-
-  # Redis
-  - type: redis
-    name: sla-redis
-    plan: free
-    maxmemoryPolicy: noeviction
-
   # API Service
   - type: web
     name: sla-api
@@ -138,3 +125,12 @@ services:
           property: port
       - key: APP_ENV
         value: production
+
+databases:
+  - name: sla-db
+    databaseName: sla_monitor
+    user: kapil
+    plan: free
+
+  - name: sla-redis
+    plan: free
