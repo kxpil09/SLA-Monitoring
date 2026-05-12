@@ -1,0 +1,159 @@
+services:
+  # API Service
+  - type: web
+    name: sla-monitor-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: sla-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: sla-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: sla-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: sla-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: sla-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: sla-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: sla-redis
+          type: redis
+          property: port
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ENABLE_EMAIL_ALERTS
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: ALERT_FROM_EMAIL
+        sync: false
+      - key: ALERT_TO_EMAILS
+        sync: false
+
+  # Celery Worker
+  - type: worker
+    name: sla-worker
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A app.celery_app worker --loglevel=info
+    envVars:
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: sla-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: sla-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: sla-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: sla-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: sla-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: sla-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: sla-redis
+          type: redis
+          property: port
+      - key: APP_ENV
+        value: production
+      - key: ENABLE_EMAIL_ALERTS
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: ALERT_FROM_EMAIL
+        sync: false
+      - key: ALERT_TO_EMAILS
+        sync: false
+
+  # Celery Beat Scheduler
+  - type: worker
+    name: sla-beat
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A app.celery_app beat --loglevel=info
+    envVars:
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: sla-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: sla-db
+          property: port
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: sla-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: sla-db
+          property: password
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: sla-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: sla-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: sla-redis
+          type: redis
+          property: port
+      - key: APP_ENV
+        value: production
+
+databases:
+  - name: sla-db
+    databaseName: sla_monitor
+    user: sla_user
+    plan: free
+
+  - name: sla-redis
+    plan: free
